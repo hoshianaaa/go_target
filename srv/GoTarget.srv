@@ -1,0 +1,4 @@
+geometry_msgs/Point target_point
+float32 stop_distance
+---
+bool status
