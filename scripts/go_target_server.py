@@ -26,15 +26,24 @@ r_pose_vec = [0.0, 0.0]
 r_t_vec = [0.0, 0.0]
 stop_distance = 0
 
-vel_limit = 0.5
+vel_limit = 0.3
 ang_vel_limit = 0.7
 
 center_scan_val = 100000
 
-def scanCallback(msg):
+def scanCallback(msg,degree=5):
+  one_data_rad = (msg.angle_max - msg.angle_min)/len(msg.ranges)
+  n = math.ceil(math.pi * degree / 180 / one_data_rad)
+  start = int(len(msg.ranges)/2-n)
+  finish = int(len(msg.ranges)/2+n+1)
+
+  number_list = range(start, finish)
+  data_list = []
+  for i in number_list:
+    data_list.append(msg.ranges[i])
+
   global center_scan_val
-  center_scan_val = msg.ranges[len(msg.ranges)/2]
-  print ("center scan:", center_scan_val)
+  center_scan_val = min(data_list)
 
 def get_limit_vel(vel):
   if vel > vel_limit:
@@ -78,10 +87,16 @@ def go_for_target():
   global r_pose_vec, r_t_vec
 
   while(1):
-    ang_vel = calcAngle(r_pose_vec, r_t_vec)
+    print("debug")
+    ang_vel = calcAngle(r_pose_vec, r_t_vec) * 2
     ang_vel = get_limit_ang_vel(ang_vel)
+    set_vel(0, ang_vel)
+    if abs(ang_vel) < 0.1:
+      break
 
-    print(ang_vel)
+  while(1):
+    ang_vel = calcAngle(r_pose_vec, r_t_vec) * 2
+    ang_vel = get_limit_ang_vel(ang_vel)
 
     vel = (ang_vel_limit - abs(ang_vel))
     vel = get_limit_vel(vel)
@@ -91,13 +106,11 @@ def go_for_target():
     if center_scan_val < stop_distance + 0.3 and ang_vel < 0.3: 
       vel = 0.2
 
-    if center_scan_val < stop_distance and ang_vel < 0.3:
-      print("finish")
+    if center_scan_val < stop_distance and ang_vel < 0.1:
       set_vel(0, 0)
       break 
 
 def handle_go_target(req):
-  print("handle_go_target")  
   global target_point, r_t_vec, stop_distance
   server_is_on = True
   start_point_received = False
